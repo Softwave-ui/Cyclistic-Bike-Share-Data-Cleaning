@@ -1,0 +1,120 @@
+---
+title: "Cyclistic bike-share Analysis"
+output: html_notebook
+date: 02/09/2022
+author: "Prince Hossain"
+---
+
+##**Background**
+
+Cyclistic is a a bike-share company in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, Cyclistic executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+
+**About the company**
+
+In 2016, Cyclistic launched a successful bike-share offering. Since then, the program has grown to a fleet of 5,824 bicycles that are geotracked and locked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime. Until now, Cyclistic’s marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the flexibility of its pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members. Cyclistic’s finance analysts have concluded that annual members are much more profitable than casual riders. Although the pricing flexibility helps Cyclistic attract more customers, Moreno believes that maximizing the number of annual members will be key to future growth. Rather than creating a marketing campaign that targets all-new customers, Moreno believes there is a very good chance to convert casual riders into members. She notes that casual riders are already aware of the Cyclistic program and have chosen Cyclistic for their mobility needs. Moreno has set a clear goal: Design marketing strategies aimed at converting casual riders into annual members. In order to do that, however, the marketing analyst team needs to better understand how annual members and casual riders differ, why casual riders would buy a membership, and how digital media could affect their marketing tactics. Moreno and her team are interested in analyzing the Cyclistic historical bike trip data to identify trends
+
+**Ask**
+
+How do annual members and casual riders use Cyclistic bikes differently?
+
+**Prepare**
+
+Using 12 months (2021) of cyclistic trip data. [divvy-tripdata](https://divvy-tripdata.s3.amazonaws.com/index.html)
+
+**Process**
+
+Using R tidyverse. Data from 12 months csv files will be loaded into data frames and cleaned.
+```{r package and library}
+install.packages("tidyverse")
+library(tidyverse)
+library(lubridate)
+```
+```{r load csv file}
+df1 <- read.csv("~/R Working Directory/Bike Data 2021/202101-divvy-tripdata.csv")
+df2 <- read.csv("~/R Working Directory/Bike Data 2021/202102-divvy-tripdata.csv")
+df3 <- read.csv("~/R Working Directory/Bike Data 2021/202103-divvy-tripdata.csv")
+df4 <- read.csv("~/R Working Directory/Bike Data 2021/202104-divvy-tripdata.csv")
+df5 <- read.csv("~/R Working Directory/Bike Data 2021/202105-divvy-tripdata.csv")
+df6 <- read.csv("~/R Working Directory/Bike Data 2021/202106-divvy-tripdata.csv")
+df7 <- read.csv("~/R Working Directory/Bike Data 2021/202107-divvy-tripdata.csv")
+df8 <- read.csv("~/R Working Directory/Bike Data 2021/202108-divvy-tripdata.csv")
+df9 <- read.csv("~/R Working Directory/Bike Data 2021/202109-divvy-tripdata.csv")
+df10 <- read.csv("~/R Working Directory/Bike Data 2021/202110-divvy-tripdata.csv")
+df11 <- read.csv("~/R Working Directory/Bike Data 2021/202111-divvy-tripdata.csv")
+df12 <- read.csv("~/R Working Directory/Bike Data 2021/202112-divvy-tripdata.csv")
+```
+
+```{r bind tables into one data frame}
+trip_data <- rbind(df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12)
+
+#trip_data that will be worked on.
+trip_data_working <- trip_data
+```
+```{r check data has been loaded properly}
+head(trip_data_working)
+```
+```{r check columns}
+colnames(trip_data_working)
+```
+```{r check structure}
+str(trip_data_working)
+```
+```{r check distinct enteries}
+#check distict ride_types and member_types
+ride_types <- distinct(trip_data_working, rideable_type) # member, casual
+member_types <- distinct(trip_data_working, member_casual) # electric_bike, classic_bike, docked_bike
+
+first_date <- min(trip_data_working$started_at)
+last_date <- max(trip_data_working$ended_at)
+```
+```{r convert date stamp to date time}
+trip_data_working$started_at <- ymd_hms(trip_data_working$started_at)
+trip_data_working$ended_at <- ymd_hms(trip_data_working$ended_at)
+```
+```{r add new column for trip duration}
+trip_data_working$trip_duration_m <- difftime(trip_data_working$ended_at, trip_data_working$started_at, unit = c("mins"))
+
+#check structure
+str(trip_data_working)
+colnames(trip_data_working)
+```
+```{r check min and max trip_duration}
+min_duration <- min(trip_data_working$trip_duration_m)
+max_duration <- max(trip_data_working$trip_duration_m)
+
+#check
+min_duration
+max_duration
+
+#we see that we need to deal with ride duration that are negative or exceed multiple days.
+```
+```{r number of rows with negative trip_duration}
+num_neg_trip <- count(trip_data_working, trip_duration_m < 1)
+num_norm_trip <- count(trip_data_working, trip_duration_m > 45)
+num_neg_trip
+num_norm_trip
+
+```
+
+
+```{r check for duplicate rows}
+duplicates <- duplicated(trip_data_working$ride_id) #we have no duplicate rows
+#which(duplicated(trip_data_working$ride_id))
+#sum(duplicates)
+```
+```{r remove bad rows}
+trip_data_cleaned <- subset(trip_data_working, !trip_duration_m < 1)
+trip_data_cleaned <- subset(trip_data_cleaned, !trip_duration_m > 45)
+trip_data_cleaned <- trip_data_cleaned[!is.na(trip_data_cleaned$end_lat),]
+```
+
+```{r check for N/A}
+str(trip_data_cleaned)
+summary(trip_data_cleaned)
+mean(trip_data_cleaned$trip_duration_m)
+```
+```{r export clean data as csv}
+write.table(trip_data_cleaned, file = "Bike_Data.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+```
+
